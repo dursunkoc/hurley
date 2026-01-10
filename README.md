@@ -2,9 +2,37 @@
 
 A curl-like HTTP client with performance testing capabilities, written in Rust.
 
-[![Crates.io](https://img.shields.io/crates/v/hurley.svg)](https://crates.io/crates/hurley)
-[![Documentation](https://docs.rs/hurley/badge.svg)](https://docs.rs/hurley)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<div align="center">
+  <a href="https://crates.io/crates/hurley">
+    <img src="https://img.shields.io/crates/v/hurley.svg?style=flat-square"
+    alt="Crates.io version" />
+  </a>
+  <a href="https://crates.io/crates/hurley">
+    <img src="https://img.shields.io/crates/d/hurley.svg?style=flat-square"
+      alt="Download" />
+  </a>
+  <a href="https://docs.rs/hurley">
+    <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square"
+      alt="docs.rs docs" />
+  </a>
+    <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg"
+      alt="License" />
+  </a>
+</div>
+
+<div align="center">
+  <h3>
+    <a href="https://docs.rs/hurley">
+      API Docs
+    </a>
+    <span> | </span>
+    <a href="https://github.com/dursunkoc/hurley/releases">
+      Releases
+    </a>
+  </h3>
+</div>
 
 ## Features
 
