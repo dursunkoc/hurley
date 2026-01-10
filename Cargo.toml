@@ -1,0 +1,31 @@
+[package]
+name = "hurley"
+version = "0.1.0"
+edition = "2021"
+authors = ["Dursun Koc <dursunkoc@gmail.com>"]
+description = "A curl-like HTTP client with performance testing capabilities"
+license = "MIT"
+repository = "https://github.com/dursunkoc/hurley"
+homepage = "https://github.com/dursunkoc/hurley"
+documentation = "https://docs.rs/hurley"
+readme = "README.md"
+keywords = ["curl", "http", "cli", "performance", "benchmark"]
+categories = ["command-line-utilities", "web-programming::http-client"]
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+indicatif = "0.17"
+colored = "2.0"
+hdrhistogram = "7.5"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "hurley"
+path = "src/main.rs"
