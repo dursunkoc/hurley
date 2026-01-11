@@ -2,6 +2,7 @@
 //!
 //! Supports text output with colored formatting and JSON export.
 
+
 use colored::Colorize;
 use super::metrics::PerfMetrics;
 
@@ -21,6 +22,30 @@ impl PerfReport {
         println!("{}", "═══════════════════════════════════════════════════════════".cyan());
         println!();
 
+        Self::print_metrics_details(metrics);
+
+        if !metrics.endpoints.is_empty() {
+            println!();
+            println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+            println!("{}", "                    ENDPOINT BREAKDOWN                      ".cyan().bold());
+            println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+            
+            let mut sorted_endpoints: Vec<_> = metrics.endpoints.iter().collect();
+            sorted_endpoints.sort_by_key(|(k, _)| *k);
+
+            for (label, stats) in sorted_endpoints {
+                println!();
+                println!("📍 {}", label.magenta().bold());
+                println!("{}", "───────────────────────────────────────────────────────────".dimmed());
+                Self::print_metrics_details(stats);
+            }
+        }
+
+        println!();
+        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+    }
+
+    fn print_metrics_details(metrics: &PerfMetrics) {
         // Request Summary
         println!("{}", "📊 Request Summary".white().bold());
         println!("   Total Requests:      {}", metrics.total_requests.to_string().cyan());
@@ -49,8 +74,6 @@ impl PerfReport {
         println!("   p50 (Median):        {:.2} ms", metrics.latency_p50_ms);
         println!("   p95:                 {:.2} ms", metrics.latency_p95_ms);
         println!("   p99:                 {:.2} ms", metrics.latency_p99_ms);
-        println!();
-        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
     }
 
     /// Prints metrics in JSON format.
@@ -95,6 +118,7 @@ mod tests {
             latency_p99_ms: 98.0,
             requests_per_second: 100.0,
             error_rate_percent: 5.0,
+            endpoints: HashMap::new(),
         }
     }
 

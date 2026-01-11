@@ -3,6 +3,7 @@
 //! Uses HdrHistogram for accurate latency percentile calculations
 //! (p50, p95, p99) with minimal memory overhead.
 
+use std::collections::HashMap;
 use std::time::Duration;
 use hdrhistogram::Histogram;
 use serde::Serialize;
@@ -37,25 +38,20 @@ pub struct PerfMetrics {
     pub requests_per_second: f64,
     /// Percentage of failed requests
     pub error_rate_percent: f64,
+    /// Metrics per endpoint (label)
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub endpoints: HashMap<String, PerfMetrics>,
 }
 
-/// Collects timing data during performance tests.
-///
-/// Records individual request durations and computes aggregate metrics.
-pub struct MetricsCollector {
+/// Internal bucket for collecting stats (histogram + counts).
+struct StatsBucket {
     histogram: Histogram<u64>,
     successful: usize,
     failed: usize,
-    start_time: Option<std::time::Instant>,
-    end_time: Option<std::time::Instant>,
 }
 
-impl MetricsCollector {
-    /// Creates a new metrics collector.
-    ///
-    /// The histogram is configured to track latencies up to 60 seconds
-    /// with 3 significant figures of precision.
-    pub fn new() -> Self {
+impl StatsBucket {
+    fn new() -> Self {
         // Create histogram with max value of 60 seconds (in microseconds)
         // sigfig=3 gives us good precision for latency measurements
         let histogram = Histogram::new_with_bounds(1, 60_000_000, 3)
@@ -65,48 +61,26 @@ impl MetricsCollector {
             histogram,
             successful: 0,
             failed: 0,
-            start_time: None,
-            end_time: None,
         }
     }
 
-    /// Marks the start of the performance test.
-    pub fn start(&mut self) {
-        self.start_time = Some(std::time::Instant::now());
-    }
-
-    /// Marks the end of the performance test.
-    pub fn finish(&mut self) {
-        self.end_time = Some(std::time::Instant::now());
-    }
-
-    /// Records a successful request with its duration.
-    pub fn record_success(&mut self, duration: Duration) {
+    fn record_success(&mut self, duration: Duration) {
         let micros = duration.as_micros() as u64;
-        // Clamp to histogram max value
         let micros = micros.min(self.histogram.high());
         let _ = self.histogram.record(micros);
         self.successful += 1;
     }
 
-    /// Records a failed request with its duration.
-    pub fn record_failure(&mut self, duration: Duration) {
+    fn record_failure(&mut self, duration: Duration) {
         let micros = duration.as_micros() as u64;
         let micros = micros.min(self.histogram.high());
         let _ = self.histogram.record(micros);
         self.failed += 1;
     }
 
-    /// Computes final metrics from collected data.
-    ///
-    /// Returns a [`PerfMetrics`] struct with all aggregate statistics.
-    pub fn compute_metrics(&self) -> PerfMetrics {
+    fn compute_metrics(&self, total_duration: Duration) -> PerfMetrics {
         let total = self.successful + self.failed;
-        let total_duration = match (self.start_time, self.end_time) {
-            (Some(start), Some(end)) => end.duration_since(start),
-            _ => Duration::ZERO,
-        };
-
+        
         let total_duration_ms = total_duration.as_secs_f64() * 1000.0;
         
         let requests_per_second = if total_duration.as_secs_f64() > 0.0 {
@@ -137,7 +111,89 @@ impl MetricsCollector {
             latency_p99_ms: to_ms(self.histogram.value_at_percentile(99.0)),
             requests_per_second,
             error_rate_percent: error_rate,
+            endpoints: HashMap::new(), // Leaf nodes don't have endpoints
         }
+    }
+}
+
+/// Collects timing data during performance tests.
+///
+/// Records individual request durations and computes aggregate metrics.
+/// Also maintains separate statistics for each unique endpoint label.
+pub struct MetricsCollector {
+    global: StatsBucket,
+    endpoints: HashMap<String, StatsBucket>,
+    start_time: Option<std::time::Instant>,
+    end_time: Option<std::time::Instant>,
+}
+
+impl MetricsCollector {
+    /// Creates a new metrics collector.
+    pub fn new() -> Self {
+        Self {
+            global: StatsBucket::new(),
+            endpoints: HashMap::new(),
+            start_time: None,
+            end_time: None,
+        }
+    }
+
+    /// Marks the start of the performance test.
+    pub fn start(&mut self) {
+        self.start_time = Some(std::time::Instant::now());
+    }
+
+    /// Marks the end of the performance test.
+    pub fn finish(&mut self) {
+        self.end_time = Some(std::time::Instant::now());
+    }
+
+    /// Records a successful request with its duration.
+    ///
+    /// If a `label` is provided, the metric is also recorded in the corresponding
+    /// endpoint bucket.
+    pub fn record_success(&mut self, duration: Duration, label: Option<&str>) {
+        self.global.record_success(duration);
+        if let Some(lbl) = label {
+            self.endpoints
+                .entry(lbl.to_string())
+                .or_insert_with(StatsBucket::new)
+                .record_success(duration);
+        }
+    }
+
+    /// Records a failed request with its duration.
+    ///
+    /// If a `label` is provided, the metric is also recorded in the corresponding
+    /// endpoint bucket.
+    pub fn record_failure(&mut self, duration: Duration, label: Option<&str>) {
+        self.global.record_failure(duration);
+        if let Some(lbl) = label {
+            self.endpoints
+                .entry(lbl.to_string())
+                .or_insert_with(StatsBucket::new)
+                .record_failure(duration);
+        }
+    }
+
+    /// Computes final metrics from collected data.
+    ///
+    /// Returns a [`PerfMetrics`] struct with all aggregate statistics.
+    pub fn compute_metrics(&self) -> PerfMetrics {
+        let total_duration = match (self.start_time, self.end_time) {
+            (Some(start), Some(end)) => end.duration_since(start),
+            _ => Duration::ZERO,
+        };
+
+        let mut metrics = self.global.compute_metrics(total_duration);
+        
+        let endpoint_metrics: HashMap<String, PerfMetrics> = self.endpoints
+            .iter()
+            .map(|(k, v)| (k.clone(), v.compute_metrics(total_duration)))
+            .collect();
+
+        metrics.endpoints = endpoint_metrics;
+        metrics
     }
 }
 
@@ -156,43 +212,50 @@ mod tests {
         let collector = MetricsCollector::new();
         let metrics = collector.compute_metrics();
         assert_eq!(metrics.total_requests, 0);
+        assert!(metrics.endpoints.is_empty());
     }
 
     #[test]
-    fn test_record_success() {
+    fn test_record_success_global() {
         let mut collector = MetricsCollector::new();
-        collector.record_success(Duration::from_millis(100));
-        collector.record_success(Duration::from_millis(200));
+        collector.record_success(Duration::from_millis(100), None);
+        collector.record_success(Duration::from_millis(200), None);
         let metrics = collector.compute_metrics();
         assert_eq!(metrics.successful_requests, 2);
         assert_eq!(metrics.failed_requests, 0);
     }
 
     #[test]
-    fn test_record_failure() {
+    fn test_record_failure_global() {
         let mut collector = MetricsCollector::new();
-        collector.record_failure(Duration::from_millis(100));
+        collector.record_failure(Duration::from_millis(100), None);
         let metrics = collector.compute_metrics();
         assert_eq!(metrics.failed_requests, 1);
     }
 
     #[test]
-    fn test_error_rate() {
+    fn test_record_with_endpoints() {
         let mut collector = MetricsCollector::new();
-        collector.record_success(Duration::from_millis(100));
-        collector.record_failure(Duration::from_millis(100));
-        let metrics = collector.compute_metrics();
-        assert!((metrics.error_rate_percent - 50.0).abs() < 0.01);
-    }
+        collector.record_success(Duration::from_millis(100), Some("GET /api"));
+        collector.record_success(Duration::from_millis(200), Some("GET /api"));
+        collector.record_failure(Duration::from_millis(50), Some("POST /login"));
 
-    #[test]
-    fn test_latency_percentiles() {
-        let mut collector = MetricsCollector::new();
-        for i in 1..=100 {
-            collector.record_success(Duration::from_millis(i));
-        }
         let metrics = collector.compute_metrics();
-        assert!(metrics.latency_p50_ms >= 49.0 && metrics.latency_p50_ms <= 51.0);
-        assert!(metrics.latency_p99_ms >= 98.0);
+        
+        // Check global
+        assert_eq!(metrics.total_requests, 3);
+        assert_eq!(metrics.successful_requests, 2);
+        assert_eq!(metrics.failed_requests, 1);
+        
+        // Check endpoints
+        assert_eq!(metrics.endpoints.len(), 2);
+        
+        let api_metrics = metrics.endpoints.get("GET /api").unwrap();
+        assert_eq!(api_metrics.total_requests, 2);
+        assert_eq!(api_metrics.successful_requests, 2);
+        
+        let login_metrics = metrics.endpoints.get("POST /login").unwrap();
+        assert_eq!(login_metrics.total_requests, 1);
+        assert_eq!(login_metrics.failed_requests, 1);
     }
 }

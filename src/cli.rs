@@ -27,7 +27,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "hurley")]
 #[command(author = "Dursun Koc <dursunkoc@gmail.com>")]
-#[command(version = "0.1.0")]
+#[command(version = "0.1.1")]
 #[command(about = "A curl-like HTTP client with performance testing capabilities", long_about = None)]
 pub struct Cli {
     /// Target URL for the HTTP request.

@@ -112,6 +112,7 @@ The performance test output includes:
 - **Request Summary**: Total, successful, failed requests
 - **Timing**: Total duration, requests/second
 - **Latency Distribution**: Min, max, avg, p50, p95, p99
+- **Endpoint Breakdown**: Detailed metrics for each unique endpoint (when using datasets)
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -134,6 +135,50 @@ The performance test output includes:
    Avg:                 89.67 ms
    p50 (Median):        78.34 ms
    p95:                 198.23 ms
+   p99:                 287.12 ms
+
+═══════════════════════════════════════════════════════════
+                    ENDPOINT BREAKDOWN
+═══════════════════════════════════════════════════════════
+
+📍 GET /users
+───────────────────────────────────────────────────────────
+📊 Request Summary
+   Total Requests:      60
+   Successful:          60
+   Failed:              0
+   Error Rate:          0.00%
+
+⏱️  Timing
+   Total Duration:      3120.45 ms
+   Requests/sec:        19.23
+
+📈 Latency Distribution
+   Min:                 45.23 ms
+   Max:                 150.12 ms
+   Avg:                 75.34 ms
+   p50 (Median):        72.10 ms
+   p95:                 120.45 ms
+   p99:                 140.23 ms
+
+📍 POST /users
+───────────────────────────────────────────────────────────
+📊 Request Summary
+   Total Requests:      40
+   Successful:          38
+   Failed:              2
+   Error Rate:          5.00%
+
+⏱️  Timing
+   Total Duration:      2113.67 ms
+   Requests/sec:        18.92
+
+📈 Latency Distribution
+   Min:                 80.12 ms
+   Max:                 312.45 ms
+   Avg:                 110.23 ms
+   p50 (Median):        95.67 ms
+   p95:                 250.34 ms
    p99:                 287.12 ms
 
 ═══════════════════════════════════════════════════════════

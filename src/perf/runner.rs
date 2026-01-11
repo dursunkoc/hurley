@@ -109,6 +109,10 @@ impl PerfRunner {
             let pb = pb.clone();
             let request = self.build_request(&entry)?;
             let verbose = self.verbose;
+            
+            // Create label for metrics (e.g., "GET /api/v1/users")
+            let path_label = entry.path.as_deref().unwrap_or("/");
+            let label = format!("{} {}", entry.method, path_label);
 
             let handle = tokio::spawn(async move {
                 let client = HttpClient::new(verbose);
@@ -120,13 +124,13 @@ impl PerfRunner {
                     let mut c = collector.lock().await;
                     match result {
                         Ok(response) if response.is_success() => {
-                            c.record_success(duration);
+                            c.record_success(duration, Some(&label));
                         }
                         Ok(_) => {
-                            c.record_failure(duration);
+                            c.record_failure(duration, Some(&label));
                         }
                         Err(_) => {
-                            c.record_failure(duration);
+                            c.record_failure(duration, Some(&label));
                         }
                     }
                 }
