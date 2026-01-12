@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="hurley.png" alt="Hurley Logo" width="200">
+</div>
+
 # hurley
 
 A curl-like HTTP client with performance testing capabilities, written in Rust.

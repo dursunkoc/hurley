@@ -103,6 +103,7 @@ impl PerfReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     fn sample_metrics() -> PerfMetrics {
         PerfMetrics {
