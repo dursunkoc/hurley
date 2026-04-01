@@ -46,6 +46,10 @@ pub enum RurlError {
     /// Data file loading or parsing error
     #[error("Data file error: {0}")]
     DataFileError(String),
+
+    /// Template variable substitution error (missing column, etc.)
+    #[error("Substitution error: {0}")]
+    SubstitutionError(String),
 }
 
 /// Result type alias using [`RurlError`].

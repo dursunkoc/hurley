@@ -13,9 +13,11 @@ pub mod datafile;
 pub mod metrics;
 pub mod runner;
 pub mod report;
+pub mod substitute;
 
 pub use dataset::Dataset;
 pub use datafile::{DataFile, DataRow};
 pub use metrics::PerfMetrics;
 pub use runner::PerfRunner;
 pub use report::PerfReport;
+pub use substitute::{extract_placeholders, substitute, validate_template};
