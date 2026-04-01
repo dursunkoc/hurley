@@ -11,6 +11,28 @@ Added: M001/S01
 
 ---
 
+## Substitute module (`src/perf/substitute.rs`)
+
+### `replace_all` closures cannot return `Result` — use a side-channel
+`regex::Regex::replace_all` takes a closure that must return `String`, not `Result<String>`.
+To propagate errors out of the closure, declare a `let mut error: Option<RurlError> = None;` before calling `replace_all`, set it inside the closure on failure, and inspect it after the call.
+**Why it matters:** Attempting to use `?` inside a `replace_all` closure won't compile. The side-channel pattern is the correct idiom.
+Added: M001/S02
+
+### `validate_template` collects ALL missing placeholders before returning
+Rather than failing on the first missing column, `validate_template` accumulates every missing name and returns one error. This gives callers an actionable, complete list instead of an iterative discovery process.
+Added: M001/S02
+
+### `get_row_for_request` takes `&DataFile`, not `&[DataRow]`
+The function signature is `get_row_for_request(data_file: &DataFile, request_index: usize) -> &DataRow`. Callers hold a parsed `DataFile`, so accepting the whole struct keeps the API consistent with how callers naturally hold data.
+Added: M001/S02
+
+### Test helpers for DataFile: write CSV to `/tmp`, parse, delete
+The test pattern in substitute.rs (function `make_csv_datafile`) writes a temp CSV file, calls `DataFile::from_path`, and immediately removes the file. No `tempfile` crate is needed. Use `std::env::temp_dir()` to avoid absolute `/tmp` paths on non-Unix platforms.
+Added: M001/S02
+
+---
+
 ## DataFile module (`src/perf/datafile.rs`)
 
 ### JSON column order is non-deterministic

@@ -9,8 +9,10 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::http::{HttpClient, HttpRequest};
 use crate::error::Result;
+use super::datafile::DataFile;
 use super::dataset::{Dataset, DatasetEntry};
 use super::metrics::{MetricsCollector, PerfMetrics};
+use super::substitute::{get_row_for_request, substitute};
 
 /// Performance test runner.
 ///
@@ -26,6 +28,7 @@ use super::metrics::{MetricsCollector, PerfMetrics};
 ///     10,  // concurrency
 ///     100, // total requests
 ///     false,
+///     None, // optional DataFile for template substitution
 /// );
 /// let metrics = runner.run(&dataset).await?;
 /// ```
@@ -35,6 +38,8 @@ pub struct PerfRunner {
     concurrency: usize,
     total_requests: usize,
     verbose: bool,
+    /// Optional data file for `{{placeholder}}` substitution.
+    data_file: Option<DataFile>,
 }
 
 impl PerfRunner {
@@ -47,12 +52,14 @@ impl PerfRunner {
     /// * `concurrency` - Maximum number of concurrent connections
     /// * `total_requests` - Total number of requests to execute
     /// * `verbose` - Whether to print verbose output
+    /// * `data_file` - Optional data file for template variable substitution
     pub fn new(
         base_url: String,
         base_request: HttpRequest,
         concurrency: usize,
         total_requests: usize,
         verbose: bool,
+        data_file: Option<DataFile>,
     ) -> Self {
         Self {
             base_url,
@@ -60,6 +67,7 @@ impl PerfRunner {
             concurrency,
             total_requests,
             verbose,
+            data_file,
         }
     }
 
@@ -79,9 +87,15 @@ impl PerfRunner {
                 .progress_chars("#>-")
         );
 
-        // Determine how many requests to make
-        let requests_to_make: Vec<DatasetEntry> = if dataset.len() >= self.total_requests {
-            dataset.entries.iter().take(self.total_requests).cloned().collect()
+        // Build (request_index, DatasetEntry) pairs so build_request can apply
+        // the correct data row for each global request index.
+        let requests_to_make: Vec<(usize, DatasetEntry)> = if dataset.len() >= self.total_requests {
+            dataset.entries
+                .iter()
+                .take(self.total_requests)
+                .cloned()
+                .enumerate()
+                .collect()
         } else {
             // Cycle through dataset entries
             dataset.entries
@@ -89,6 +103,7 @@ impl PerfRunner {
                 .cycle()
                 .take(self.total_requests)
                 .cloned()
+                .enumerate()
                 .collect()
         };
 
@@ -103,11 +118,11 @@ impl PerfRunner {
 
         let mut handles = Vec::new();
 
-        for entry in requests_to_make {
+        for (request_index, entry) in requests_to_make {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
             let collector = Arc::clone(&collector);
             let pb = pb.clone();
-            let request = self.build_request(&entry)?;
+            let request = self.build_request(&entry, request_index)?;
             let verbose = self.verbose;
             
             // Create label for metrics (e.g., "GET /api/v1/users")
@@ -159,8 +174,15 @@ impl PerfRunner {
         Ok(metrics)
     }
 
-    fn build_request(&self, entry: &DatasetEntry) -> Result<HttpRequest> {
-        let url = if let Some(path) = &entry.path {
+    /// Builds an [`HttpRequest`] for `entry` at global `request_index`.
+    ///
+    /// When a [`DataFile`] is present, every `{{placeholder}}` in the URL,
+    /// header values, and body is replaced with the corresponding value from
+    /// the cycling data row for that index.  When absent, existing behaviour
+    /// is unchanged.
+    fn build_request(&self, entry: &DatasetEntry, request_index: usize) -> Result<HttpRequest> {
+        // Resolve raw URL (base + path or absolute path)
+        let raw_url = if let Some(path) = &entry.path {
             if path.starts_with("http://") || path.starts_with("https://") {
                 path.clone()
             } else {
@@ -170,28 +192,56 @@ impl PerfRunner {
             self.base_url.clone()
         };
 
-        let mut request = HttpRequest::new(url)
+        // Resolve the data row for this request index (None when no data file)
+        let row_opt = self
+            .data_file
+            .as_ref()
+            .map(|df| get_row_for_request(df, request_index));
+
+        // Apply substitution to URL (no-op when row_opt is None)
+        let final_url = match row_opt {
+            Some(row) => substitute(&raw_url, row)?,
+            None => raw_url,
+        };
+
+        let mut request = HttpRequest::new(final_url)
             .method(&entry.method)?
             .timeout(self.base_request.timeout)
             .follow_redirects(self.base_request.follow_redirects);
 
-        // Merge headers from base request
+        // Merge headers from base request (with optional substitution)
         for (key, value) in &self.base_request.headers {
-            request = request.header(key, value);
+            let v = match row_opt {
+                Some(row) => substitute(value, row)?,
+                None => value.clone(),
+            };
+            request = request.header(key, v);
         }
 
-        // Override with entry-specific headers
+        // Override with entry-specific headers (with optional substitution)
         if let Some(headers) = &entry.headers {
             for (key, value) in headers {
-                request = request.header(key, value);
+                let v = match row_opt {
+                    Some(row) => substitute(value, row)?,
+                    None => value.clone(),
+                };
+                request = request.header(key, v);
             }
         }
 
-        // Set body
+        // Set body (entry body takes priority over base request body)
         if let Some(body) = entry.get_body_string() {
-            request = request.body(body);
-        } else if let Some(body) = &self.base_request.body {
-            request = request.body(body.clone());
+            let b = match row_opt {
+                Some(row) => substitute(&body, row)?,
+                None => body,
+            };
+            request = request.body(b);
+        } else if let Some(ref body) = self.base_request.body {
+            let b = match row_opt {
+                Some(row) => substitute(body, row)?,
+                None => body.clone(),
+            };
+            request = request.body(b);
         }
 
         Ok(request)

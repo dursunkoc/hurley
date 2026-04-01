@@ -107,6 +107,19 @@ pub struct Cli {
     /// Output format for performance results (text, json).
     #[arg(long = "output", default_value = "text")]
     pub output_format: String,
+
+    /// CSV or JSON data file for template variable substitution.
+    ///
+    /// Rows are cycled across requests.  Every `{{placeholder}}` in the URL,
+    /// headers, and body is replaced with the corresponding column value.
+    ///
+    /// # Example
+    /// ```bash
+    /// hurley -X POST https://api.example.com/users/{{user_id}} \
+    ///   -d '{"key": "{{api_key}}"}' --data-file users.csv -n 100 -c 10
+    /// ```
+    #[arg(long = "data-file")]
+    pub data_file: Option<PathBuf>,
 }
 
 impl Cli {
@@ -116,6 +129,9 @@ impl Cli {
     /// - A performance dataset file is specified (`--perf`)
     /// - Total requests is greater than 1 (`-n`)
     /// - Concurrency is greater than 1 (`-c`)
+    ///
+    /// Note: `--data-file` alone (with `-n 1`) does NOT activate perf mode;
+    /// standalone mode iterates all rows sequentially in that case.
     pub fn is_perf_mode(&self) -> bool {
         self.perf_file.is_some() || self.total_requests > 1 || self.concurrency > 1
     }
@@ -183,5 +199,26 @@ mod tests {
         assert!(cli.include_headers);
         assert!(cli.follow_redirects);
         assert!(cli.verbose);
+    }
+
+    #[test]
+    fn test_data_file_flag() {
+        let cli = Cli::parse_from([
+            "hurley",
+            "https://example.com",
+            "--data-file", "data.csv",
+        ]);
+        assert_eq!(cli.data_file, Some(PathBuf::from("data.csv")));
+    }
+
+    #[test]
+    fn test_data_file_alone_not_perf_mode() {
+        // --data-file alone with default -n 1 should NOT trigger perf mode.
+        let cli = Cli::parse_from([
+            "hurley",
+            "https://example.com",
+            "--data-file", "data.csv",
+        ]);
+        assert!(!cli.is_perf_mode());
     }
 }
