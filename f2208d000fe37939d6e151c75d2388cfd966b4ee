@@ -1,0 +1,23 @@
+Cargo.toml
+  7b4f5158ba648257 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.4",
+  "base_commit_sha": "f2208d000fe37939d6e151c75d2388cfd966b4ee",
+  "prompts": {
+    "7b4f5158ba648257": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "cd9585fe-345a-4ffc-9d72-98969a548c00",
+        "model": "copilot/claude-sonnet-4.6"
+      },
+      "human_author": "DURSUN KOC",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
