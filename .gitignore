@@ -27,3 +27,5 @@ vendor/
 coverage/
 .cache/
 tmp/
+.bg-shell/
+.gsd/
