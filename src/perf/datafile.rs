@@ -274,6 +274,90 @@ mod tests {
         assert!(cols.contains(&"z".to_string()));
     }
 
+    // ── CSV edge-case tests ────────────────────────────────────────────────
+
+    #[test]
+    fn test_csv_quoted_fields() {
+        // Fields containing commas and doubled double-quotes (RFC 4180 escaping).
+        let csv = "name,desc\n\"Alice\",\"says \"\"hello\"\"\"\n\"Bob\",\"a, b, c\"";
+        let df = DataFile::parse_csv(csv).unwrap();
+        assert_eq!(df.len(), 2);
+        assert_eq!(
+            df.rows()[0].get("name").map(String::as_str),
+            Some("Alice")
+        );
+        assert_eq!(
+            df.rows()[0].get("desc").map(String::as_str),
+            Some("says \"hello\"")
+        );
+        assert_eq!(
+            df.rows()[1].get("desc").map(String::as_str),
+            Some("a, b, c")
+        );
+    }
+
+    // ── JSON edge-case tests ───────────────────────────────────────────────
+
+    #[test]
+    fn test_json_ndjson() {
+        let ndjson = "{\"id\":\"1\"}\n{\"id\":\"2\"}";
+        let df = DataFile::parse_json(ndjson).unwrap();
+        assert_eq!(df.len(), 2);
+        let ids: Vec<&str> = df.rows().iter().filter_map(|r| r.get("id").map(String::as_str)).collect();
+        assert!(ids.contains(&"1"));
+        assert!(ids.contains(&"2"));
+    }
+
+    #[test]
+    fn test_json_mixed_coercion() {
+        // Numbers and booleans in the same object coerce to strings.
+        let json = r#"[{"id": 1, "active": true, "score": 9.5}]"#;
+        let df = DataFile::parse_json(json).unwrap();
+        assert_eq!(df.rows()[0].get("id").map(String::as_str), Some("1"));
+        assert_eq!(df.rows()[0].get("active").map(String::as_str), Some("true"));
+        assert_eq!(df.rows()[0].get("score").map(String::as_str), Some("9.5"));
+    }
+
+    // ── from_path routing tests ────────────────────────────────────────────
+
+    #[test]
+    fn test_from_path_csv() {
+        use std::io::Write;
+        let path = std::env::temp_dir().join("hurley_test_route.csv");
+        let mut f = std::fs::File::create(&path).expect("create temp csv");
+        write!(f, "x,y\n1,2\n3,4").unwrap();
+        let df = DataFile::from_path(&path).expect("parse csv via from_path");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(df.len(), 2);
+        assert_eq!(df.rows()[0].get("x").map(String::as_str), Some("1"));
+    }
+
+    #[test]
+    fn test_from_path_json() {
+        use std::io::Write;
+        let path = std::env::temp_dir().join("hurley_test_route.json");
+        let mut f = std::fs::File::create(&path).expect("create temp json");
+        write!(f, r#"[{{"k":"v1"}},{{"k":"v2"}}]"#).unwrap();
+        let df = DataFile::from_path(&path).expect("parse json via from_path");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(df.len(), 2);
+        let vals: Vec<&str> = df.rows().iter().filter_map(|r| r.get("k").map(String::as_str)).collect();
+        assert!(vals.contains(&"v1"));
+        assert!(vals.contains(&"v2"));
+    }
+
+    #[test]
+    fn test_extension_case_insensitive() {
+        use std::io::Write;
+        let path = std::env::temp_dir().join("hurley_test_case.CSV");
+        let mut f = std::fs::File::create(&path).expect("create temp .CSV file");
+        write!(f, "col\nval").unwrap();
+        let df = DataFile::from_path(&path).expect("parse .CSV (uppercase) via from_path");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(df.len(), 1);
+        assert_eq!(df.rows()[0].get("col").map(String::as_str), Some("val"));
+    }
+
     // ── Negative / boundary tests ──────────────────────────────────────────
 
     #[test]
