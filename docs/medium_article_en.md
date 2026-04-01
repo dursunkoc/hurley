@@ -42,15 +42,29 @@ A distinguishing feature of the tool is its ability to instantaneously transform
 
 hurley is built upon Rust's `Tokio` asynchronous runtime. This architecture allows for the management of a high number of concurrent connections while utilizing system resources (CPU and Memory) at minimal levels. The intensity of the test scenario is determined by the `-c` (concurrency) and `-n` (total requests) parameters.
 
-### 3.2. Dataset-Based Stochastic Testing
+### 3.2. Parameterized and Dataset-Based Testing
 
-To simulate real-world traffic patterns, hurley supports non-deterministic test scenarios. Through a dataset defined in JSON format, requests with different endpoints, methods, and payloads can be distributed randomly or sequentially. This approach is critical for eliminating the misleading effects of cache mechanisms (cache warming bias) and measuring the general stability of the system.
+To simulate real-world traffic patterns, hurley supports data-driven test scenarios. Users can provide a data file (CSV or JSON) containing rows of variables, and write request templates using `{{column_name}}` placeholders.
+
+This approach is critical for eliminating the misleading effects of cache mechanisms (cache warming bias) and measuring the general stability of the system with realistic, varying inputs.
+
+*   **Data Files:** Supported via the `--data-file` flag, accepting CSV files with headers or JSON arrays of objects.
+*   **Variable Substitution:** Placeholders like `{{user_id}}` can be used in the URL path, HTTP headers, and the request body.
+*   **Row Cycling:** During a load test, requests sequentially cycle through the data rows, ensuring all data is exercised deterministically.
+
+```bash
+# Example: Parameterized load test using a CSV data file
+hurley -X POST https://api.example.com/users/{{user_id}} \
+  -H "Authorization: Bearer {{api_token}}" \
+  -d '{"role": "{{role}}"}' \
+  --data-file users.csv -c 10 -n 1000
+```
 
 ```json
-/* Example Dataset Schema */
+/* Example JSON Dataset Schema (Alternative to CSV) */
 [
-  { "method": "GET", "path": "/api/users/101" },
-  { "method": "POST", "path": "/api/orders", "body": { "id": 55, "item": "A-1" } }
+  { "user_id": 101, "api_token": "abc...", "role": "admin" },
+  { "user_id": 102, "api_token": "def...", "role": "user" }
 ]
 ```
 

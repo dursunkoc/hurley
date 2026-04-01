@@ -97,6 +97,36 @@ hurley https://httpbin.org --perf requests.json -c 20 -n 500
 hurley https://httpbin.org/get -c 5 -n 50 --output json
 ```
 
+### Parameterized Load Testing
+
+hurley supports data-driven test scenarios using the `--data-file` flag with CSV or JSON datasets and request templates containing `{{column_name}}` placeholders.
+
+**Features:**
+- **Data Files:** `--data-file` accepts CSV (with headers) or JSON array of objects.
+- **Substitution:** Placeholders like `{{user_id}}` are substituted in URL paths, headers, and request bodies.
+- **Sequential Cycling:** Requests cycle sequentially through dataset rows, allowing deterministic load simulation.
+
+```bash
+# Parameterized load test with CSV data
+hurley -X POST https://api.example.com/users/{{user_id}} \
+  -H "Authorization: Bearer {{api_token}}" \
+  -d '{"role": "{{role}}"}' \
+  --data-file users.csv -c 10 -n 1000
+```
+
+```csv
+# users.csv
+user_id,api_token,role
+101,abc123token,admin
+102,def456token,user
+103,ghi789token,viewer
+```
+
+```bash
+# Single parameterized request (no -n or -c, creates one request per data row)
+hurley https://api.example.com/users/{{user_id}} --data-file users.csv
+```
+
 ### Dataset Format
 
 Create a JSON file with request definitions:
