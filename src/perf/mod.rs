@@ -20,4 +20,4 @@ pub use datafile::{DataFile, DataRow};
 pub use metrics::PerfMetrics;
 pub use runner::PerfRunner;
 pub use report::PerfReport;
-pub use substitute::{extract_placeholders, substitute, validate_template};
+pub use substitute::{extract_placeholders, get_row_for_request, substitute, validate_template};

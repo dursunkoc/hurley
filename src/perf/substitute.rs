@@ -18,7 +18,7 @@ use regex::Regex;
 
 use crate::error::{Result, RurlError};
 
-use super::datafile::DataRow;
+use super::datafile::{DataFile, DataRow};
 
 /// Compiled regex that matches `{{placeholder}}` with optional whitespace.
 ///
@@ -107,6 +107,19 @@ pub fn validate_template(template: &str, columns: &[String]) -> Result<()> {
             columns.join(", ")
         )))
     }
+}
+
+/// Returns a reference to the data row that should be used for `request_index`.
+///
+/// Rows are cycled deterministically using modulo arithmetic so that sequential
+/// request indices fan out across all rows and then wrap back to the start.
+///
+/// # Panics
+///
+/// Panics if `data_file` contains no rows (empty files are rejected earlier by
+/// [`DataFile::from_path`], so this should never be reached in practice).
+pub fn get_row_for_request(data_file: &DataFile, request_index: usize) -> &DataRow {
+    &data_file.rows()[request_index % data_file.len()]
 }
 
 // ── Unit tests ────────────────────────────────────────────────────────────────
@@ -208,5 +221,114 @@ mod tests {
         let r = row(&[("user_id", "42")]);
         let out = substitute("Hello {{ user_id }}, you are {{  user_id  }}", &r).unwrap();
         assert_eq!(out, "Hello 42, you are 42");
+    }
+
+    // ── Helpers for DataFile-based tests ──────────────────────────────────
+
+    /// Creates a temporary CSV file, loads it as a DataFile, and removes the
+    /// temp file.  The caller receives the loaded DataFile.
+    fn make_csv_datafile(filename: &str, csv_content: &str) -> DataFile {
+        use std::io::Write;
+        let path = std::env::temp_dir().join(filename);
+        let mut f = std::fs::File::create(&path).expect("create temp csv");
+        write!(f, "{}", csv_content).unwrap();
+        let df = DataFile::from_path(&path).expect("parse temp csv");
+        let _ = std::fs::remove_file(&path);
+        df
+    }
+
+    // R005 — basic cycling over 3 rows, requests 0-5
+    #[test]
+    fn test_get_row_cycling_basic() {
+        let df = make_csv_datafile(
+            "hurley_sub_cycle3.csv",
+            "id\nrow0\nrow1\nrow2",
+        );
+        assert_eq!(df.len(), 3);
+        assert_eq!(get_row_for_request(&df, 0).get("id").map(String::as_str), Some("row0"));
+        assert_eq!(get_row_for_request(&df, 1).get("id").map(String::as_str), Some("row1"));
+        assert_eq!(get_row_for_request(&df, 2).get("id").map(String::as_str), Some("row2"));
+        // Wrap-around
+        assert_eq!(get_row_for_request(&df, 3).get("id").map(String::as_str), Some("row0"));
+        assert_eq!(get_row_for_request(&df, 4).get("id").map(String::as_str), Some("row1"));
+        assert_eq!(get_row_for_request(&df, 5).get("id").map(String::as_str), Some("row2"));
+    }
+
+    // R005 — 100 rows: request 999 → 999 % 100 = 99 → row index 99
+    #[test]
+    fn test_get_row_cycling_large() {
+        // Build CSV header + 100 rows (id = "row0" .. "row99")
+        let mut csv = String::from("id\n");
+        for i in 0..100usize {
+            csv.push_str(&format!("row{}\n", i));
+        }
+        let df = make_csv_datafile("hurley_sub_cycle100.csv", &csv);
+        assert_eq!(df.len(), 100);
+        let target = get_row_for_request(&df, 999);
+        // 999 % 100 == 99
+        assert_eq!(target.get("id").map(String::as_str), Some("row99"));
+    }
+
+    // R005 — single row: every request index returns the same row
+    #[test]
+    fn test_get_row_single_row() {
+        let df = make_csv_datafile("hurley_sub_cycle1.csv", "val\nonly");
+        assert_eq!(df.len(), 1);
+        for idx in [0, 1, 100, 9999] {
+            assert_eq!(
+                get_row_for_request(&df, idx).get("val").map(String::as_str),
+                Some("only"),
+                "request {} should return the sole row",
+                idx
+            );
+        }
+    }
+
+    // `{{}}` has no \w+ inside — regex must NOT match it
+    #[test]
+    fn test_substitute_empty_placeholder() {
+        let r = row(&[]);
+        let out = substitute("before {{}} after", &r).unwrap();
+        assert_eq!(out, "before {{}} after", "empty braces must be left intact");
+    }
+
+    // `{{{col}}}` — outer brace is literal, inner `{{col}}` is substituted
+    #[test]
+    fn test_substitute_nested_braces() {
+        let r = row(&[("col", "value")]);
+        let out = substitute("{{{col}}}", &r).unwrap();
+        // Leading `{` stays, `{{col}}` → "value", trailing `}` stays
+        assert_eq!(out, "{value}");
+    }
+
+    // Single-brace JSON `{"key": "value"}` must remain untouched
+    #[test]
+    fn test_substitute_json_body_no_false_match() {
+        let r = row(&[]);
+        let template = r#"{"key": "value", "num": 42}"#;
+        let out = substitute(template, &r).unwrap();
+        assert_eq!(out, template, "single-brace JSON must not be altered");
+    }
+
+    // Same placeholder appearing twice is replaced twice
+    #[test]
+    fn test_substitute_repeated_placeholder() {
+        let r = row(&[("id", "42")]);
+        let out = substitute("{{id}}-{{id}}", &r).unwrap();
+        assert_eq!(out, "42-42");
+    }
+
+    // validate_template succeeds when the template contains no placeholders
+    #[test]
+    fn test_validate_template_no_placeholders() {
+        let result = validate_template("https://example.com/static", &cols(&[]));
+        assert!(result.is_ok(), "no-placeholder template must always pass");
+    }
+
+    // extract_placeholders returns each name only once, even when duplicated
+    #[test]
+    fn test_extract_placeholders_dedup() {
+        let names = extract_placeholders("{{a}} {{b}} {{a}} {{b}} {{c}}");
+        assert_eq!(names, vec!["a", "b", "c"], "duplicates must be deduplicated");
     }
 }
