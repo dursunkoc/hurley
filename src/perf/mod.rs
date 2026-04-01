@@ -9,11 +9,13 @@
 //! - [`PerfReport`] - Text and JSON output formatting
 
 pub mod dataset;
+pub mod datafile;
 pub mod metrics;
 pub mod runner;
 pub mod report;
 
 pub use dataset::Dataset;
+pub use datafile::{DataFile, DataRow};
 pub use metrics::PerfMetrics;
 pub use runner::PerfRunner;
 pub use report::PerfReport;
