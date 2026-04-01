@@ -42,15 +42,29 @@ Aracın ayırt edici özelliği, harici bir konfigürasyona ihtiyaç duymadan, m
 
 hurley, Rust'ın \`Tokio\` asenkron çalışma zamanı (runtime) üzerine inşa edilmiştir. Bu mimari, sistem kaynaklarını (CPU ve Bellek) minimum seviyede kullanarak yüksek sayıda eşzamanlı bağlantının (concurrent connections) yönetilmesine olanak tanır. \`-c\` (concurrency) ve \`-n\` (total requests) parametreleri ile test senaryosunun yoğunluğu belirlenir.
 
-### 3.2. Veri Seti (Dataset) Tabanlı Stokastik Test
+### 3.2. Veri Seti (Dataset) Tabanlı ve Parametrik Yük Testi
 
-Gerçek dünya trafik desenlerini simüle etmek amacıyla, hurley deterministik olmayan test senaryolarını destekler. JSON formatında tanımlanan bir veri seti üzerinden, farklı endpoint'lere, metodlara ve payload'lara sahip istekler rastgele veya sıralı olarak dağıtılabilir. Bu yaklaşım, önbellek (cache) mekanizmalarının yanıltıcı etkilerini (cache warming bias) elimine etmek ve sistemin genel kararlılığını ölçmek için kritiktir.
+Gerçek dünya trafik desenlerini simüle etmek amacıyla hurley, veri güdümlü (data-driven) test senaryolarını destekler. Kullanıcılar değişken satırları içeren bir veri dosyası (CSV veya JSON) sağlayarak, `{{sutun_adi}}` yer tutucularını içeren istek şablonları oluşturabilir.
+
+Bu yaklaşım, önbellek (cache) mekanizmalarının yanıltıcı etkilerini (cache warming bias) elimine etmek ve sistemin genel kararlılığını farklı ve gerçekçi girdilerle ölçmek için kritiktir.
+
+*   **Veri Dosyaları:** `--data-file` parametresi ile başlık satırı içeren CSV dosyaları veya JSON obje dizileri desteklenir.
+*   **Değişken Değiştirme (Substitution):** `{{user_id}}` gibi yer tutucular URL yolunda (path), HTTP header'larında ve istek gövdesinde (body) kullanılabilir.
+*   **Satır Döngüsü (Row Cycling):** Yük testi sırasında, istekler veri satırları arasında deterministik olarak ardışık şekilde döner, böylece tüm verilerin kullanıldığından emin olunur.
+
+\`\`\`bash
+# Örnek: CSV veri dosyası kullanan parametrik yük testi
+hurley -X POST https://api.example.com/users/{{user_id}} \
+  -H "Authorization: Bearer {{api_token}}" \
+  -d '{"role": "{{role}}"}' \
+  --data-file users.csv -c 10 -n 1000
+\`\`\`
 
 \`\`\`json
-/* Örnek Veri Seti Şeması */
+/* Örnek JSON Veri Seti Şeması (CSV'ye alternatif) */
 [
-  { "method": "GET", "path": "/api/users/101" },
-  { "method": "POST", "path": "/api/orders", "body": { "id": 55, "item": "A-1" } }
+  { "user_id": 101, "api_token": "abc...", "role": "admin" },
+  { "user_id": 102, "api_token": "def...", "role": "user" }
 ]
 \`\`\`
 

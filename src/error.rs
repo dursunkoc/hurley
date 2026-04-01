@@ -42,6 +42,14 @@ pub enum RurlError {
     /// Performance test execution error
     #[error("Performance test error: {0}")]
     PerfError(String),
+
+    /// Data file loading or parsing error
+    #[error("Data file error: {0}")]
+    DataFileError(String),
+
+    /// Template variable substitution error (missing column, etc.)
+    #[error("Substitution error: {0}")]
+    SubstitutionError(String),
 }
 
 /// Result type alias using [`RurlError`].
@@ -67,5 +75,12 @@ mod tests {
     fn test_dataset_error() {
         let error = RurlError::DatasetError("empty file".to_string());
         assert!(error.to_string().contains("Dataset error"));
+    }
+
+    #[test]
+    fn test_data_file_error() {
+        let error = RurlError::DataFileError("unsupported extension".to_string());
+        assert!(error.to_string().contains("Data file error"));
+        assert!(error.to_string().contains("unsupported extension"));
     }
 }

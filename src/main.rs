@@ -39,7 +39,7 @@ use colored::Colorize;
 use cli::Cli;
 use error::Result;
 use http::{HttpClient, HttpRequest};
-use perf::{Dataset, PerfRunner, PerfReport};
+use perf::{DataFile, Dataset, PerfRunner, PerfReport, get_row_for_request, substitute, validate_template};
 
 #[tokio::main]
 async fn main() {
@@ -66,25 +66,84 @@ async fn run() -> Result<()> {
         request = request.body_from_file(file)?;
     }
 
+    // Load and validate data file if specified — fail fast before any HTTP call.
+    let data_file: Option<DataFile> = if let Some(ref path) = cli.data_file {
+        let df = DataFile::from_path(path)?;
+
+        // Validate every template string (URL + each header + body).
+        let mut templates: Vec<String> = vec![cli.url.clone()];
+        templates.extend(cli.headers.iter().cloned());
+        if let Some(ref data) = cli.data {
+            templates.push(data.clone());
+        }
+        for tmpl in &templates {
+            validate_template(tmpl, df.columns())?;
+        }
+
+        Some(df)
+    } else {
+        None
+    };
+
     // Performance test mode
     if cli.is_perf_mode() {
-        run_perf_test(&cli, request).await?;
+        run_perf_test(&cli, request, data_file).await?;
     } else {
         // Single request mode
-        run_single_request(&cli, request).await?;
+        run_single_request(&cli, request, data_file.as_ref()).await?;
     }
 
     Ok(())
 }
 
-async fn run_single_request(cli: &Cli, request: HttpRequest) -> Result<()> {
+async fn run_single_request(cli: &Cli, request: HttpRequest, data_file: Option<&DataFile>) -> Result<()> {
     let client = HttpClient::new(cli.verbose);
-    let response = client.execute(&request).await?;
-    response.print(cli.include_headers, cli.verbose);
+
+    if let Some(df) = data_file {
+        // Execute one request per data row — total = data_file.len()
+        for i in 0..df.len() {
+            let row = get_row_for_request(df, i);
+
+            // Substitute URL
+            let url = substitute(&request.url, row)?;
+
+            // Substitute raw CLI header strings, then re-parse
+            let substituted_headers: Vec<String> = cli
+                .headers
+                .iter()
+                .map(|h| substitute(h, row))
+                .collect::<Result<Vec<_>>>()?;
+
+            // Substitute body
+            let body = request
+                .body
+                .as_ref()
+                .map(|b| substitute(b, row))
+                .transpose()?;
+
+            // Build a fresh request for this row
+            let mut row_request = HttpRequest::new(url)
+                .method(request.method.as_str())?
+                .timeout(request.timeout)
+                .follow_redirects(request.follow_redirects)
+                .headers_from_strings(&substituted_headers)?;
+
+            if let Some(b) = body {
+                row_request = row_request.body(b);
+            }
+
+            let response = client.execute(&row_request).await?;
+            response.print(cli.include_headers, cli.verbose);
+        }
+    } else {
+        let response = client.execute(&request).await?;
+        response.print(cli.include_headers, cli.verbose);
+    }
+
     Ok(())
 }
 
-async fn run_perf_test(cli: &Cli, base_request: HttpRequest) -> Result<()> {
+async fn run_perf_test(cli: &Cli, base_request: HttpRequest, data_file: Option<DataFile>) -> Result<()> {
     println!("{}", "🚀 Starting Performance Test".cyan().bold());
     println!("   URL: {}", cli.url.yellow());
     println!("   Concurrency: {}", cli.concurrency);
@@ -105,6 +164,7 @@ async fn run_perf_test(cli: &Cli, base_request: HttpRequest) -> Result<()> {
         cli.concurrency,
         cli.total_requests,
         cli.verbose,
+        data_file,
     );
 
     let metrics = runner.run(&dataset).await?;
