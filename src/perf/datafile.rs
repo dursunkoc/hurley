@@ -107,8 +107,8 @@ impl DataFile {
 
         let mut rows = Vec::new();
         for result in reader.records() {
-            let record = result
-                .map_err(|e| RurlError::DataFileError(format!("CSV parse error: {}", e)))?;
+            let record =
+                result.map_err(|e| RurlError::DataFileError(format!("CSV parse error: {}", e)))?;
             let row: DataRow = headers
                 .iter()
                 .zip(record.iter())
@@ -236,7 +236,11 @@ mod tests {
         let json = r#"[{"name":"Alice","score":"100"},{"name":"Bob","score":"90"}]"#;
         let df = DataFile::parse_json(json).unwrap();
         assert_eq!(df.len(), 2);
-        let names: Vec<&str> = df.rows().iter().filter_map(|r| r.get("name").map(|s| s.as_str())).collect();
+        let names: Vec<&str> = df
+            .rows()
+            .iter()
+            .filter_map(|r| r.get("name").map(|s| s.as_str()))
+            .collect();
         assert!(names.contains(&"Alice"));
         assert!(names.contains(&"Bob"));
     }
@@ -254,7 +258,10 @@ mod tests {
         let json = r#"[{"active": true, "deleted": false}]"#;
         let df = DataFile::parse_json(json).unwrap();
         assert_eq!(df.rows()[0].get("active").map(String::as_str), Some("true"));
-        assert_eq!(df.rows()[0].get("deleted").map(String::as_str), Some("false"));
+        assert_eq!(
+            df.rows()[0].get("deleted").map(String::as_str),
+            Some("false")
+        );
     }
 
     #[test]
@@ -282,10 +289,7 @@ mod tests {
         let csv = "name,desc\n\"Alice\",\"says \"\"hello\"\"\"\n\"Bob\",\"a, b, c\"";
         let df = DataFile::parse_csv(csv).unwrap();
         assert_eq!(df.len(), 2);
-        assert_eq!(
-            df.rows()[0].get("name").map(String::as_str),
-            Some("Alice")
-        );
+        assert_eq!(df.rows()[0].get("name").map(String::as_str), Some("Alice"));
         assert_eq!(
             df.rows()[0].get("desc").map(String::as_str),
             Some("says \"hello\"")
@@ -303,7 +307,11 @@ mod tests {
         let ndjson = "{\"id\":\"1\"}\n{\"id\":\"2\"}";
         let df = DataFile::parse_json(ndjson).unwrap();
         assert_eq!(df.len(), 2);
-        let ids: Vec<&str> = df.rows().iter().filter_map(|r| r.get("id").map(String::as_str)).collect();
+        let ids: Vec<&str> = df
+            .rows()
+            .iter()
+            .filter_map(|r| r.get("id").map(String::as_str))
+            .collect();
         assert!(ids.contains(&"1"));
         assert!(ids.contains(&"2"));
     }
@@ -341,7 +349,11 @@ mod tests {
         let df = DataFile::from_path(&path).expect("parse json via from_path");
         let _ = std::fs::remove_file(&path);
         assert_eq!(df.len(), 2);
-        let vals: Vec<&str> = df.rows().iter().filter_map(|r| r.get("k").map(String::as_str)).collect();
+        let vals: Vec<&str> = df
+            .rows()
+            .iter()
+            .filter_map(|r| r.get("k").map(String::as_str))
+            .collect();
         assert!(vals.contains(&"v1"));
         assert!(vals.contains(&"v2"));
     }
@@ -372,6 +384,10 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("Unsupported file extension"), "unexpected: {}", msg);
+        assert!(
+            msg.contains("Unsupported file extension"),
+            "unexpected: {}",
+            msg
+        );
     }
 }

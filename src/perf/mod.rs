@@ -8,18 +8,18 @@
 //! - [`PerfMetrics`] - Latency percentiles and throughput metrics
 //! - [`PerfReport`] - Text and JSON output formatting
 
-pub mod dataset;
 pub mod datafile;
+pub mod dataset;
 pub mod metrics;
-pub mod runner;
 pub mod report;
+pub mod runner;
 pub mod substitute;
 
-pub use dataset::Dataset;
 pub use datafile::{DataFile, DataRow};
+pub use dataset::Dataset;
 pub use metrics::PerfMetrics;
-pub use runner::PerfRunner;
 pub use report::PerfReport;
+pub use runner::PerfRunner;
 pub use substitute::{extract_placeholders, get_row_for_request, substitute, validate_template};
 
 // ── Integration tests ─────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ pub use substitute::{extract_placeholders, get_row_for_request, substitute, vali
 mod integration_tests {
     use std::io::Write;
 
-    use super::{DataFile, get_row_for_request, substitute, validate_template};
+    use super::{get_row_for_request, substitute, validate_template, DataFile};
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -185,7 +185,10 @@ mod integration_tests {
         } else {
             url.to_string()
         };
-        assert_eq!(effective_url, url, "without data file, URL must be unchanged");
+        assert_eq!(
+            effective_url, url,
+            "without data file, URL must be unchanged"
+        );
 
         // Template with placeholders — None path must not panic either.
         let url_with_placeholders = "https://api.example.com/users/{{user_id}}";

@@ -31,15 +31,19 @@ pub mod cli;
 pub mod error;
 pub mod http;
 pub mod perf;
+pub mod workflow;
 
 use clap::Parser;
-use std::time::Duration;
 use colored::Colorize;
+use std::time::Duration;
 
 use cli::Cli;
 use error::Result;
 use http::{HttpClient, HttpRequest};
-use perf::{DataFile, Dataset, PerfRunner, PerfReport, get_row_for_request, substitute, validate_template};
+use perf::{
+    get_row_for_request, substitute, validate_template, DataFile, Dataset, PerfReport, PerfRunner,
+};
+use workflow::{Workflow, WorkflowRunner};
 
 #[tokio::main]
 async fn main() {
@@ -85,8 +89,13 @@ async fn run() -> Result<()> {
         None
     };
 
-    // Performance test mode
-    if cli.is_perf_mode() {
+    if let Some(workflow_file) = &cli.workflow_file {
+        // Workflow mode
+        let workflow = Workflow::from_file(workflow_file)?;
+        let runner = WorkflowRunner::new(cli.url.clone(), request, cli.verbose);
+        runner.run(&workflow).await?;
+    } else if cli.is_perf_mode() {
+        // Performance test mode
         run_perf_test(&cli, request, data_file).await?;
     } else {
         // Single request mode
@@ -96,7 +105,11 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
-async fn run_single_request(cli: &Cli, request: HttpRequest, data_file: Option<&DataFile>) -> Result<()> {
+async fn run_single_request(
+    cli: &Cli,
+    request: HttpRequest,
+    data_file: Option<&DataFile>,
+) -> Result<()> {
     let client = HttpClient::new(cli.verbose);
 
     if let Some(df) = data_file {
@@ -143,7 +156,11 @@ async fn run_single_request(cli: &Cli, request: HttpRequest, data_file: Option<&
     Ok(())
 }
 
-async fn run_perf_test(cli: &Cli, base_request: HttpRequest, data_file: Option<DataFile>) -> Result<()> {
+async fn run_perf_test(
+    cli: &Cli,
+    base_request: HttpRequest,
+    data_file: Option<DataFile>,
+) -> Result<()> {
     println!("{}", "🚀 Starting Performance Test".cyan().bold());
     println!("   URL: {}", cli.url.yellow());
     println!("   Concurrency: {}", cli.concurrency);
@@ -168,7 +185,7 @@ async fn run_perf_test(cli: &Cli, base_request: HttpRequest, data_file: Option<D
     );
 
     let metrics = runner.run(&dataset).await?;
-    
+
     PerfReport::print(&metrics, &cli.output_format);
 
     Ok(())

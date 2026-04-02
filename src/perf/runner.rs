@@ -2,17 +2,17 @@
 //!
 //! Executes concurrent HTTP requests using tokio and collects timing metrics.
 
+use indicatif::{ProgressBar, ProgressStyle};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
-use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::http::{HttpClient, HttpRequest};
-use crate::error::Result;
 use super::datafile::DataFile;
 use super::dataset::{Dataset, DatasetEntry};
 use super::metrics::{MetricsCollector, PerfMetrics};
 use super::substitute::{get_row_for_request, substitute};
+use crate::error::Result;
+use crate::http::{HttpClient, HttpRequest};
 
 /// Performance test runner.
 ///
@@ -77,7 +77,7 @@ impl PerfRunner {
     /// cycling through dataset entries if needed to reach the total request count.
     pub async fn run(&self, dataset: &Dataset) -> Result<PerfMetrics> {
         let collector = Arc::new(Mutex::new(MetricsCollector::new()));
-        
+
         // Create progress bar
         let pb = ProgressBar::new(self.total_requests as u64);
         pb.set_style(
@@ -90,7 +90,8 @@ impl PerfRunner {
         // Build (request_index, DatasetEntry) pairs so build_request can apply
         // the correct data row for each global request index.
         let requests_to_make: Vec<(usize, DatasetEntry)> = if dataset.len() >= self.total_requests {
-            dataset.entries
+            dataset
+                .entries
                 .iter()
                 .take(self.total_requests)
                 .cloned()
@@ -98,7 +99,8 @@ impl PerfRunner {
                 .collect()
         } else {
             // Cycle through dataset entries
-            dataset.entries
+            dataset
+                .entries
                 .iter()
                 .cycle()
                 .take(self.total_requests)
@@ -124,7 +126,7 @@ impl PerfRunner {
             let pb = pb.clone();
             let request = self.build_request(&entry, request_index)?;
             let verbose = self.verbose;
-            
+
             // Create label for metrics (e.g., "GET /api/v1/users")
             let path_label = entry.path.as_deref().unwrap_or("/");
             let label = format!("{} {}", entry.method, path_label);

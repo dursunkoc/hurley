@@ -27,7 +27,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "hurley")]
 #[command(author = "Dursun Koc <dursunkoc@gmail.com>")]
-#[command(version = "0.1.1")]
+#[command(version = "0.1.5")]
 #[command(about = "A curl-like HTTP client with performance testing capabilities", long_about = None)]
 pub struct Cli {
     /// Target URL for the HTTP request.
@@ -120,6 +120,10 @@ pub struct Cli {
     /// ```
     #[arg(long = "data-file")]
     pub data_file: Option<PathBuf>,
+
+    /// Run a workflow of dependent requests defined in a JSON file.
+    #[arg(long = "workflow")]
+    pub workflow_file: Option<PathBuf>,
 }
 
 impl Cli {
@@ -156,9 +160,11 @@ mod tests {
     fn test_post_with_data() {
         let cli = Cli::parse_from([
             "hurley",
-            "-X", "POST",
+            "-X",
+            "POST",
             "https://example.com",
-            "-d", r#"{"key": "value"}"#,
+            "-d",
+            r#"{"key": "value"}"#,
         ]);
         assert_eq!(cli.method, "POST");
         assert_eq!(cli.data, Some(r#"{"key": "value"}"#.to_string()));
@@ -169,8 +175,10 @@ mod tests {
         let cli = Cli::parse_from([
             "hurley",
             "https://example.com",
-            "-H", "Content-Type: application/json",
-            "-H", "Authorization: Bearer token",
+            "-H",
+            "Content-Type: application/json",
+            "-H",
+            "Authorization: Bearer token",
         ]);
         assert_eq!(cli.headers.len(), 2);
         assert_eq!(cli.headers[0], "Content-Type: application/json");
@@ -178,12 +186,7 @@ mod tests {
 
     #[test]
     fn test_perf_mode_with_concurrency() {
-        let cli = Cli::parse_from([
-            "hurley",
-            "https://example.com",
-            "-c", "10",
-            "-n", "100",
-        ]);
+        let cli = Cli::parse_from(["hurley", "https://example.com", "-c", "10", "-n", "100"]);
         assert!(cli.is_perf_mode());
         assert_eq!(cli.concurrency, 10);
         assert_eq!(cli.total_requests, 100);
@@ -191,11 +194,7 @@ mod tests {
 
     #[test]
     fn test_flags() {
-        let cli = Cli::parse_from([
-            "hurley",
-            "https://example.com",
-            "-i", "-L", "-v",
-        ]);
+        let cli = Cli::parse_from(["hurley", "https://example.com", "-i", "-L", "-v"]);
         assert!(cli.include_headers);
         assert!(cli.follow_redirects);
         assert!(cli.verbose);
@@ -203,22 +202,14 @@ mod tests {
 
     #[test]
     fn test_data_file_flag() {
-        let cli = Cli::parse_from([
-            "hurley",
-            "https://example.com",
-            "--data-file", "data.csv",
-        ]);
+        let cli = Cli::parse_from(["hurley", "https://example.com", "--data-file", "data.csv"]);
         assert_eq!(cli.data_file, Some(PathBuf::from("data.csv")));
     }
 
     #[test]
     fn test_data_file_alone_not_perf_mode() {
         // --data-file alone with default -n 1 should NOT trigger perf mode.
-        let cli = Cli::parse_from([
-            "hurley",
-            "https://example.com",
-            "--data-file", "data.csv",
-        ]);
+        let cli = Cli::parse_from(["hurley", "https://example.com", "--data-file", "data.csv"]);
         assert!(!cli.is_perf_mode());
     }
 }

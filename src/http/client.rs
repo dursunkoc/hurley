@@ -2,14 +2,14 @@
 //!
 //! Provides the [`HttpClient`] which executes HTTP requests using reqwest.
 
+use colored::Colorize;
 use reqwest::redirect::Policy;
 use reqwest::Client;
 use std::time::Instant;
-use colored::Colorize;
 
-use crate::error::Result;
 use super::request::HttpRequest;
 use super::response::HttpResponse;
+use crate::error::Result;
 
 /// HTTP client for executing requests.
 ///
@@ -89,11 +89,11 @@ impl HttpClient {
     fn print_request_info(&self, request: &HttpRequest) {
         println!("{}", ">>> Request".blue().bold());
         println!("{} {}", request.method.as_str().green(), request.url.cyan());
-        
+
         for (key, value) in &request.headers {
             println!("{}: {}", key.yellow(), value);
         }
-        
+
         if let Some(body) = &request.body {
             println!();
             // Try to pretty print JSON
@@ -107,7 +107,7 @@ impl HttpClient {
                 println!("{}", body);
             }
         }
-        
+
         println!();
         println!("{}", "<<< Response".blue().bold());
     }

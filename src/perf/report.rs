@@ -2,9 +2,8 @@
 //!
 //! Supports text output with colored formatting and JSON export.
 
-
-use colored::Colorize;
 use super::metrics::PerfMetrics;
+use colored::Colorize;
 
 /// Performance report formatter.
 ///
@@ -17,40 +16,75 @@ impl PerfReport {
     /// Includes request summary, timing information, and latency distribution.
     pub fn print_text(metrics: &PerfMetrics) {
         println!();
-        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
-        println!("{}", "                    PERFORMANCE RESULTS                     ".cyan().bold());
-        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════".cyan()
+        );
+        println!(
+            "{}",
+            "                    PERFORMANCE RESULTS                     "
+                .cyan()
+                .bold()
+        );
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════".cyan()
+        );
         println!();
 
         Self::print_metrics_details(metrics);
 
         if !metrics.endpoints.is_empty() {
             println!();
-            println!("{}", "═══════════════════════════════════════════════════════════".cyan());
-            println!("{}", "                    ENDPOINT BREAKDOWN                      ".cyan().bold());
-            println!("{}", "═══════════════════════════════════════════════════════════".cyan());
-            
+            println!(
+                "{}",
+                "═══════════════════════════════════════════════════════════".cyan()
+            );
+            println!(
+                "{}",
+                "                    ENDPOINT BREAKDOWN                      "
+                    .cyan()
+                    .bold()
+            );
+            println!(
+                "{}",
+                "═══════════════════════════════════════════════════════════".cyan()
+            );
+
             let mut sorted_endpoints: Vec<_> = metrics.endpoints.iter().collect();
             sorted_endpoints.sort_by_key(|(k, _)| *k);
 
             for (label, stats) in sorted_endpoints {
                 println!();
                 println!("📍 {}", label.magenta().bold());
-                println!("{}", "───────────────────────────────────────────────────────────".dimmed());
+                println!(
+                    "{}",
+                    "───────────────────────────────────────────────────────────".dimmed()
+                );
                 Self::print_metrics_details(stats);
             }
         }
 
         println!();
-        println!("{}", "═══════════════════════════════════════════════════════════".cyan());
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════".cyan()
+        );
     }
 
     fn print_metrics_details(metrics: &PerfMetrics) {
         // Request Summary
         println!("{}", "📊 Request Summary".white().bold());
-        println!("   Total Requests:      {}", metrics.total_requests.to_string().cyan());
-        println!("   Successful:          {}", metrics.successful_requests.to_string().green());
-        println!("   Failed:              {}", 
+        println!(
+            "   Total Requests:      {}",
+            metrics.total_requests.to_string().cyan()
+        );
+        println!(
+            "   Successful:          {}",
+            metrics.successful_requests.to_string().green()
+        );
+        println!(
+            "   Failed:              {}",
             if metrics.failed_requests > 0 {
                 metrics.failed_requests.to_string().red()
             } else {
@@ -62,8 +96,16 @@ impl PerfReport {
 
         // Timing
         println!("{}", "⏱️  Timing".white().bold());
-        println!("   Total Duration:      {:.2} ms", metrics.total_duration_ms);
-        println!("   Requests/sec:        {}", format!("{:.2}", metrics.requests_per_second).yellow().bold());
+        println!(
+            "   Total Duration:      {:.2} ms",
+            metrics.total_duration_ms
+        );
+        println!(
+            "   Requests/sec:        {}",
+            format!("{:.2}", metrics.requests_per_second)
+                .yellow()
+                .bold()
+        );
         println!();
 
         // Latency Distribution

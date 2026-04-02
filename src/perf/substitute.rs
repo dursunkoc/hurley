@@ -23,9 +23,8 @@ use super::datafile::{DataFile, DataRow};
 /// Compiled regex that matches `{{placeholder}}` with optional whitespace.
 ///
 /// Capture group 1 is the trimmed placeholder name (`\w+`).
-static PLACEHOLDER_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\{\{\s*(\w+)\s*\}\}").expect("placeholder regex is valid")
-});
+static PLACEHOLDER_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{\s*(\w+)\s*\}\}").expect("placeholder regex is valid"));
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -129,7 +128,10 @@ mod tests {
     use super::*;
 
     fn row(pairs: &[(&str, &str)]) -> DataRow {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     fn cols(names: &[&str]) -> Vec<String> {
@@ -183,13 +185,14 @@ mod tests {
     // R006 — validate detects missing column
     #[test]
     fn test_validate_template_missing() {
-        let err = validate_template(
-            "{{user_id}} {{no_such_col}}",
-            &cols(&["user_id", "email"]),
-        )
-        .unwrap_err();
+        let err = validate_template("{{user_id}} {{no_such_col}}", &cols(&["user_id", "email"]))
+            .unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("no_such_col"), "expected missing col in: {}", msg);
+        assert!(
+            msg.contains("no_such_col"),
+            "expected missing col in: {}",
+            msg
+        );
         assert!(msg.contains("user_id"), "expected available in: {}", msg);
     }
 
@@ -240,18 +243,33 @@ mod tests {
     // R005 — basic cycling over 3 rows, requests 0-5
     #[test]
     fn test_get_row_cycling_basic() {
-        let df = make_csv_datafile(
-            "hurley_sub_cycle3.csv",
-            "id\nrow0\nrow1\nrow2",
-        );
+        let df = make_csv_datafile("hurley_sub_cycle3.csv", "id\nrow0\nrow1\nrow2");
         assert_eq!(df.len(), 3);
-        assert_eq!(get_row_for_request(&df, 0).get("id").map(String::as_str), Some("row0"));
-        assert_eq!(get_row_for_request(&df, 1).get("id").map(String::as_str), Some("row1"));
-        assert_eq!(get_row_for_request(&df, 2).get("id").map(String::as_str), Some("row2"));
+        assert_eq!(
+            get_row_for_request(&df, 0).get("id").map(String::as_str),
+            Some("row0")
+        );
+        assert_eq!(
+            get_row_for_request(&df, 1).get("id").map(String::as_str),
+            Some("row1")
+        );
+        assert_eq!(
+            get_row_for_request(&df, 2).get("id").map(String::as_str),
+            Some("row2")
+        );
         // Wrap-around
-        assert_eq!(get_row_for_request(&df, 3).get("id").map(String::as_str), Some("row0"));
-        assert_eq!(get_row_for_request(&df, 4).get("id").map(String::as_str), Some("row1"));
-        assert_eq!(get_row_for_request(&df, 5).get("id").map(String::as_str), Some("row2"));
+        assert_eq!(
+            get_row_for_request(&df, 3).get("id").map(String::as_str),
+            Some("row0")
+        );
+        assert_eq!(
+            get_row_for_request(&df, 4).get("id").map(String::as_str),
+            Some("row1")
+        );
+        assert_eq!(
+            get_row_for_request(&df, 5).get("id").map(String::as_str),
+            Some("row2")
+        );
     }
 
     // R005 — 100 rows: request 999 → 999 % 100 = 99 → row index 99
@@ -329,6 +347,10 @@ mod tests {
     #[test]
     fn test_extract_placeholders_dedup() {
         let names = extract_placeholders("{{a}} {{b}} {{a}} {{b}} {{c}}");
-        assert_eq!(names, vec!["a", "b", "c"], "duplicates must be deduplicated");
+        assert_eq!(
+            names,
+            vec!["a", "b", "c"],
+            "duplicates must be deduplicated"
+        );
     }
 }

@@ -69,9 +69,10 @@ impl HttpRequest {
     ///
     /// Returns [`RurlError::InvalidMethod`] if the method is not valid.
     pub fn method(mut self, method: &str) -> Result<Self> {
-        self.method = method.to_uppercase().parse().map_err(|_| {
-            RurlError::InvalidMethod(method.to_string())
-        })?;
+        self.method = method
+            .to_uppercase()
+            .parse()
+            .map_err(|_| RurlError::InvalidMethod(method.to_string()))?;
         Ok(self)
     }
 
@@ -99,10 +100,8 @@ impl HttpRequest {
             if parts.len() != 2 {
                 return Err(RurlError::InvalidHeader(header.clone()));
             }
-            self.headers.insert(
-                parts[0].trim().to_string(),
-                parts[1].trim().to_string(),
-            );
+            self.headers
+                .insert(parts[0].trim().to_string(), parts[1].trim().to_string());
         }
         Ok(self)
     }
@@ -184,16 +183,14 @@ mod tests {
     #[test]
     fn test_invalid_method() {
         // Empty string is truly invalid
-        let result = HttpRequest::new("https://example.com")
-            .method("");
+        let result = HttpRequest::new("https://example.com").method("");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_custom_method_allowed() {
         // reqwest allows custom methods like "CUSTOM"
-        let result = HttpRequest::new("https://example.com")
-            .method("CUSTOM");
+        let result = HttpRequest::new("https://example.com").method("CUSTOM");
         assert!(result.is_ok());
     }
 
@@ -203,7 +200,10 @@ mod tests {
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer token");
         assert_eq!(request.headers.len(), 2);
-        assert_eq!(request.headers.get("Content-Type"), Some(&"application/json".to_string()));
+        assert_eq!(
+            request.headers.get("Content-Type"),
+            Some(&"application/json".to_string())
+        );
     }
 
     #[test]
@@ -215,29 +215,29 @@ mod tests {
         let request = HttpRequest::new("https://example.com")
             .headers_from_strings(&headers)
             .unwrap();
-        assert_eq!(request.headers.get("Content-Type"), Some(&"application/json".to_string()));
+        assert_eq!(
+            request.headers.get("Content-Type"),
+            Some(&"application/json".to_string())
+        );
         assert_eq!(request.headers.get("X-Custom"), Some(&"value".to_string()));
     }
 
     #[test]
     fn test_invalid_header_format() {
         let headers = vec!["invalid-header-no-colon".to_string()];
-        let result = HttpRequest::new("https://example.com")
-            .headers_from_strings(&headers);
+        let result = HttpRequest::new("https://example.com").headers_from_strings(&headers);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_body() {
-        let request = HttpRequest::new("https://example.com")
-            .body(r#"{"key": "value"}"#);
+        let request = HttpRequest::new("https://example.com").body(r#"{"key": "value"}"#);
         assert_eq!(request.body, Some(r#"{"key": "value"}"#.to_string()));
     }
 
     #[test]
     fn test_timeout() {
-        let request = HttpRequest::new("https://example.com")
-            .timeout(Duration::from_secs(60));
+        let request = HttpRequest::new("https://example.com").timeout(Duration::from_secs(60));
         assert_eq!(request.timeout, Duration::from_secs(60));
     }
 }

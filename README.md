@@ -127,6 +127,41 @@ user_id,api_token,role
 hurley https://api.example.com/users/{{user_id}} --data-file users.csv
 ```
 
+### Workflows (Conditional Execution)
+
+hurley supports running multi-step execution workflows based on conditional responses. By passing a JSON file to `--workflow`, you can execute dependent requests dynamically.
+
+```bash
+hurley --workflow flow.json https://httpbin.org
+```
+
+**`flow.json` format:**
+
+```json
+{
+  "steps": [
+    {
+      "id": "get_user",
+      "request": {
+        "method": "GET",
+        "path": "/json"
+      }
+    },
+    {
+      "id": "conditional_step",
+      "condition": "responses.get_user.slideshow.author == \"Yours Truly\"",
+      "request": {
+        "method": "POST",
+        "path": "/post",
+        "body": {"message": "Success! The author matched."}
+      }
+    }
+  ]
+}
+```
+
+The condition is evaluated against JSON responses of previous steps. Use `responses.<step_id>.<json_path>` to query values.
+
 ### Dataset Format
 
 Create a JSON file with request definitions:

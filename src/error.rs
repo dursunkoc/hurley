@@ -50,6 +50,10 @@ pub enum RurlError {
     /// Template variable substitution error (missing column, etc.)
     #[error("Substitution error: {0}")]
     SubstitutionError(String),
+
+    /// Workflow parsing or execution error
+    #[error("Workflow error: {0}")]
+    WorkflowError(String),
 }
 
 /// Result type alias using [`RurlError`].

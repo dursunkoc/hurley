@@ -3,10 +3,10 @@
 //! Provides response parsing and formatted output with colored
 //! status codes and headers.
 
+use colored::Colorize;
 use reqwest::header::HeaderMap;
 use reqwest::StatusCode;
 use std::time::Duration;
-use colored::Colorize;
 
 /// HTTP response with timing information.
 ///
@@ -26,12 +26,7 @@ pub struct HttpResponse {
 
 impl HttpResponse {
     /// Creates a new HTTP response.
-    pub fn new(
-        status: StatusCode,
-        headers: HeaderMap,
-        body: String,
-        duration: Duration,
-    ) -> Self {
+    pub fn new(status: StatusCode, headers: HeaderMap, body: String, duration: Duration) -> Self {
         Self {
             status,
             headers,
@@ -51,8 +46,12 @@ impl HttpResponse {
     /// - 4xx: Yellow
     /// - 5xx: Red
     pub fn format_status(&self) -> String {
-        let status_str = format!("HTTP/1.1 {} {}", self.status.as_u16(), self.status.canonical_reason().unwrap_or(""));
-        
+        let status_str = format!(
+            "HTTP/1.1 {} {}",
+            self.status.as_u16(),
+            self.status.canonical_reason().unwrap_or("")
+        );
+
         if self.status.is_success() {
             status_str.green().to_string()
         } else if self.status.is_client_error() {

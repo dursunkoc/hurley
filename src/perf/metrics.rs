@@ -3,10 +3,10 @@
 //! Uses HdrHistogram for accurate latency percentile calculations
 //! (p50, p95, p99) with minimal memory overhead.
 
-use std::collections::HashMap;
-use std::time::Duration;
 use hdrhistogram::Histogram;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::time::Duration;
 
 /// Performance test metrics.
 ///
@@ -54,9 +54,9 @@ impl StatsBucket {
     fn new() -> Self {
         // Create histogram with max value of 60 seconds (in microseconds)
         // sigfig=3 gives us good precision for latency measurements
-        let histogram = Histogram::new_with_bounds(1, 60_000_000, 3)
-            .expect("Failed to create histogram");
-        
+        let histogram =
+            Histogram::new_with_bounds(1, 60_000_000, 3).expect("Failed to create histogram");
+
         Self {
             histogram,
             successful: 0,
@@ -80,9 +80,9 @@ impl StatsBucket {
 
     fn compute_metrics(&self, total_duration: Duration) -> PerfMetrics {
         let total = self.successful + self.failed;
-        
+
         let total_duration_ms = total_duration.as_secs_f64() * 1000.0;
-        
+
         let requests_per_second = if total_duration.as_secs_f64() > 0.0 {
             total as f64 / total_duration.as_secs_f64()
         } else {
@@ -186,8 +186,9 @@ impl MetricsCollector {
         };
 
         let mut metrics = self.global.compute_metrics(total_duration);
-        
-        let endpoint_metrics: HashMap<String, PerfMetrics> = self.endpoints
+
+        let endpoint_metrics: HashMap<String, PerfMetrics> = self
+            .endpoints
             .iter()
             .map(|(k, v)| (k.clone(), v.compute_metrics(total_duration)))
             .collect();
@@ -241,19 +242,19 @@ mod tests {
         collector.record_failure(Duration::from_millis(50), Some("POST /login"));
 
         let metrics = collector.compute_metrics();
-        
+
         // Check global
         assert_eq!(metrics.total_requests, 3);
         assert_eq!(metrics.successful_requests, 2);
         assert_eq!(metrics.failed_requests, 1);
-        
+
         // Check endpoints
         assert_eq!(metrics.endpoints.len(), 2);
-        
+
         let api_metrics = metrics.endpoints.get("GET /api").unwrap();
         assert_eq!(api_metrics.total_requests, 2);
         assert_eq!(api_metrics.successful_requests, 2);
-        
+
         let login_metrics = metrics.endpoints.get("POST /login").unwrap();
         assert_eq!(login_metrics.total_requests, 1);
         assert_eq!(login_metrics.failed_requests, 1);

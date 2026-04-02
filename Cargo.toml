@@ -1,6 +1,6 @@
 [package]
 name = "hurley"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Dursun Koc <dursunkoc@gmail.com>"]
 description = "A curl-like HTTP client with performance testing capabilities"
@@ -24,6 +24,9 @@ colored = "2.0"
 hdrhistogram = "7.5"
 csv = "1.3"
 regex = "1"
+evalexpr = "13.1.0"
+jsonpath-rust = "1.0.4"
+gjson = "0.8.1"
 
 [dev-dependencies]
 tokio-test = "0.4"

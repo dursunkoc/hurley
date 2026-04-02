@@ -88,7 +88,9 @@ impl Dataset {
 
         // Try parsing as single object
         if let Ok(entry) = serde_json::from_str::<DatasetEntry>(content) {
-            return Ok(Self { entries: vec![entry] });
+            return Ok(Self {
+                entries: vec![entry],
+            });
         }
 
         // Try parsing as newline-delimited JSON (NDJSON)

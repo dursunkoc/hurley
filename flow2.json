@@ -1,0 +1,20 @@
+{
+  "steps": [
+    {
+      "id": "get_user",
+      "request": {
+        "method": "GET",
+        "path": "https://httpbin.org/json"
+      }
+    },
+    {
+      "id": "conditional_step",
+      "condition": "responses.get_user.slideshow.author != \"Yours Truly\"",
+      "request": {
+        "method": "POST",
+        "path": "https://httpbin.org/post",
+        "body": {"message": "Success! The author matched."}
+      }
+    }
+  ]
+}
