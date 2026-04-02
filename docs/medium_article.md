@@ -68,6 +68,41 @@ hurley -X POST https://api.example.com/users/{{user_id}} \
 ]
 \`\`\`
 
+### 3.3. İş Akışları (Workflow) ve Koşullu Yürütme
+
+hurley, koşullu yanıtlara dayalı olarak çok adımlı yürütme iş akışlarını destekler. `--workflow` parametresine bir JSON dosyası ileterek, bağımlı istekleri dinamik olarak çalıştırabilir ve önceki adımın sonuçlarına göre mantık oluşturabilirsiniz.
+
+```bash
+hurley --workflow flow.json https://httpbin.org
+```
+
+**`flow.json` formatı:**
+
+```json
+{
+  "steps": [
+    {
+      "id": "get_user",
+      "request": {
+        "method": "GET",
+        "path": "/json"
+      }
+    },
+    {
+      "id": "conditional_step",
+      "condition": "responses.get_user.slideshow.author == \"Yours Truly\"",
+      "request": {
+        "method": "POST",
+        "path": "/post",
+        "body": {"message": "Success! The author matched."}
+      }
+    }
+  ]
+}
+```
+
+Koşul, önceki adımların JSON yanıtlarına karşı değerlendirilir. Değerleri sorgulamak için `responses.<step_id>.<json_path>` sözdizimi kullanılır.
+
 ---
 
 ## 4. Performans Metrikleri ve İstatistiksel Analiz
