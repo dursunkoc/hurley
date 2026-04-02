@@ -1,0 +1,34 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.4",
+  "base_commit_sha": "8b7e5c409b7b5181c111a9ab71db56652374d24b",
+  "prompts": {
+    "744b8fd8b408b3be": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "5d1e1ad0-209e-47d8-929c-babf415a058b",
+        "model": "copilot/auto"
+      },
+      "human_author": "DURSUN KOC",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "868947baa4ff4087": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "16b7636e-fcfa-4d46-8c71-3f6bba389b33",
+        "model": "unknown"
+      },
+      "human_author": "DURSUN KOC",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
