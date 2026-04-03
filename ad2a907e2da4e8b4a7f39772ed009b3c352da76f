@@ -1,0 +1,23 @@
+README.md
+  3691cccab468e80f 31-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.4",
+  "base_commit_sha": "ad2a907e2da4e8b4a7f39772ed009b3c352da76f",
+  "prompts": {
+    "3691cccab468e80f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8d3546da-ba88-43e6-9b92-315cdbbda905",
+        "model": "copilot/auto"
+      },
+      "human_author": "DURSUN KOC",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
