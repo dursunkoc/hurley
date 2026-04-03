@@ -28,6 +28,10 @@ A curl-like HTTP client with performance testing capabilities, written in Rust.
 
 <div align="center">
   <h3>
+    <a href="docs/DOCUMENTATION.md">
+      Documentation
+    </a>
+    <span> | </span>
     <a href="https://docs.rs/hurley">
       API Docs
     </a>
