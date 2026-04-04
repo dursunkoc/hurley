@@ -53,11 +53,35 @@ A curl-like HTTP client with performance testing capabilities, written in Rust.
 
 ## Installation
 
+### macOS and Linux
+
+You can install the pre-compiled binary (for Apple Silicon/Intel Macs and Linux) via our shell script:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/dursunkoc/hurley/releases/latest/download/hurley-installer.sh | sh
+```
+
+### Windows
+
+You can install the pre-compiled binary via our PowerShell script:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://github.com/dursunkoc/hurley/releases/latest/download/hurley-installer.ps1 | iex"
+```
+
+### Pre-compiled Binaries (Manual)
+
+Standalone binaries for Windows, macOS, and Linux are available on the [Releases page](https://github.com/dursunkoc/hurley/releases). Simply download the archive for your system, extract it, and place the `hurley` executable in your system's `PATH`.
+
+### Using Cargo
+
+If you have Rust and Cargo installed, you can build and install directly:
+
 ```bash
 cargo install hurley
 ```
 
-Or build from source:
+### Build from source
 
 ```bash
 git clone https://github.com/dursunkoc/hurley.git
