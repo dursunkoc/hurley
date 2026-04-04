@@ -24,6 +24,11 @@ A curl-like HTTP client with performance testing capabilities, written in Rust.
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg"
       alt="License" />
   </a>
+  </a>
+    <a href="https://github.com/dursunkoc/hurley/actions/workflows/release.yml">
+    <img src="https://github.com/dursunkoc/hurley/actions/workflows/release.yml/badge.svg"
+      alt="Release" />
+  </a>
 </div>
 
 <div align="center">
