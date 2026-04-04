@@ -34,3 +34,8 @@ tokio-test = "0.4"
 [[bin]]
 name = "hurley"
 path = "src/main.rs"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
